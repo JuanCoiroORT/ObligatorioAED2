@@ -7,6 +7,7 @@ import interfaz.Categoria;
 import interfaz.Retorno;
 import tads.ABB;
 import interfaz.Sistema;
+import tads.Cola;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -345,7 +346,63 @@ public class ImplementacionSistema implements Sistema  {
 
     @Override
     public Retorno redFarmaciasPorCantidadDeConexiones(String codigoOrigen, int cantidad) {
-        return Retorno.noImplementada();
+        //1--Validaciones
+        if(codigoOrigen == null || codigoOrigen.isEmpty()){
+            return Retorno.error2("Los codigos no pueden ser vacios o  nulos.");
+        }
+        if(cantidad < 0){
+            return Retorno.error1("La cantidad de conexiones no puede ser menor a 0.");
+        }
+
+        //2- Buscar farmacia de origen
+        Farmacia origen = null;
+        int idxOrigen = -1;
+        for(int i = 0; i < farmaciasRegistradas; i++){
+            if(farmacias[i].getCodigo().equals(codigoOrigen)){
+                origen = farmacias[i];
+                idxOrigen = i;
+                break;
+            }
+        }
+        if(origen == null){
+            return Retorno.error3("No existe la farmacia de origen.");
+        }
+        //3- Inicializar BFS
+        boolean[] visitados = new boolean[farmaciasRegistradas];
+        int[] niveles = new int[farmaciasRegistradas];
+        Cola<Farmacia> cola = new Cola<>(farmaciasRegistradas);
+
+        cola.push(origen);
+        visitados[idxOrigen] = true;
+        niveles[idxOrigen] = 0;
+
+        //4- BFS (Breadth-First Search)
+        while(!cola.isEmpty()){
+            Farmacia actual = cola.pop();
+            int nivelActual = 0;
+            int idxActual = -1;
+
+            //Obtener indice y nivel de la farmacia actual
+            for(int i = 0; i < farmaciasRegistradas; i++){
+                if(farmacias[i].equals(actual)){
+                    idxActual = i;
+                    nivelActual = niveles[i];
+                    break;
+                }
+            }
+
+            if(nivelActual >= cantidad) continue;
+
+            //Explorar vecinos
+            for(int i = 0; i < farmaciasRegistradas; i++){
+                Conexion conexion = conexiones[i];
+                Farmacia vecino = null;
+
+                if(conexion.getCodigoOrigen().equals(actual.getCodigo())) vecino.setCodigo(conexion.getCodigoDestino());
+
+                else if(conexion.getCodigoDestino().equals(actual.getCodigo())){}
+            }
+        }
     }
 
     @Override
