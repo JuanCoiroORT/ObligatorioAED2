@@ -286,45 +286,68 @@ public class ImplementacionSistema implements Sistema  {
         return Retorno.ok("Farmacia registrada correctamente.");
     }
 
+    private Farmacia obtenerFarmacia(String codigo){
+        Nodo<Farmacia> nodo = farmacias.getInicio();
+        while (nodo != null) {
+            if (nodo.getDato().getCodigo().equals(codigo)) {
+                return nodo.getDato();
+            }
+            nodo = nodo.getSiguiente();
+        }
+        return null;
+    }
+
+    // Devuelve la lista de conexiones de una farmacia, la inicializa si no existe
+    private Lista<Conexion> obtenerListaConexiones(String codigo) {
+        Lista<Conexion> lista = conexiones.get(codigo);
+        if (lista == null) {
+            lista = new Lista<>();
+            conexiones.put(codigo, lista);
+        }
+        return lista;
+    }
+
+
     @Override
     public Retorno registrarConexion(String codigoOrigen, String codigoDestino, int tiempo, int distancia, int costo) {
-        //1--Validaciones
-        if (codigoOrigen == null || codigoOrigen.isEmpty()) {
-            return Retorno.error2("Los codigos no pueden ser vacios o  nulos.");
+        // Validaciones
+        if (codigoOrigen == null || codigoOrigen.isEmpty() || codigoDestino == null || codigoDestino.isEmpty()) {
+            return Retorno.error1("Los códigos no pueden ser vacíos o nulos.");
         }
         if (tiempo <= 0 || distancia <= 0 || costo <= 0) {
-            return Retorno.error1("Los valores de tiempo, distancia y costo deben ser mayores que cero.");
+            return Retorno.error4("Tiempo, distancia y costo deben ser mayores a cero.");
         }
 
-        //2--Verificar que los vertices existan
-        if(!conexiones.containsKey(codigoOrigen)){
-            return Retorno.error2("No existe la farmacia de origen.");
-        }
-        if(!conexiones.containsKey(codigoDestino)){
-            return Retorno.error2("No existe la farmacia de destino.");
-        }
+        // Obtener farmacias
+        Farmacia fOrigen = obtenerFarmacia(codigoOrigen);
+        if (fOrigen == null) return Retorno.error2("No existe la farmacia de origen.");
 
-        Lista<Conexion> listaOrigen = conexiones.get(codigoOrigen);
-        Lista<Conexion> listaDestino = conexiones.get(codigoDestino);
+        Farmacia fDestino = obtenerFarmacia(codigoDestino);
+        if (fDestino == null) return Retorno.error3("No existe la farmacia de destino.");
 
-        //3--Verificar que no exista ya la conexion
+        // Obtener/crear listas de conexiones
+        Lista<Conexion> listaOrigen = obtenerListaConexiones(codigoOrigen);
+        Lista<Conexion> listaDestino = obtenerListaConexiones(codigoDestino);
+
+        // Verificar duplicados
         Nodo<Conexion> nodo = listaOrigen.getInicio();
         while (nodo != null) {
             if (nodo.getDato().getCodigoDestino().equals(codigoDestino)) {
-                return Retorno.error1("Ya existe una conexión entre estas farmacias.");
+                return Retorno.error5("Ya existe una conexión entre estas farmacias.");
             }
             nodo = nodo.getSiguiente();
         }
 
-        //4--Crear arista y agregar a ambos lados(grafo no dirigido)
-        Conexion aristaOrigen = new Conexion(codigoDestino, codigoDestino, tiempo, distancia, costo);
-        Conexion aristaDestino = new Conexion(codigoOrigen, codigoDestino, tiempo, distancia, costo);
+        // Crear aristas (grafo no dirigido)
+        Conexion aristaOrigen = new Conexion(codigoOrigen, codigoDestino, tiempo, distancia, costo);
+        Conexion aristaDestino = new Conexion(codigoOrigen,codigoDestino, tiempo, distancia, costo);
 
         listaOrigen.agregarInicio(aristaOrigen);
         listaDestino.agregarInicio(aristaDestino);
 
         return Retorno.ok("Conexión registrada correctamente.");
     }
+
 
     private Farmacia buscarFarmaciaPorCodigo(String codigo){
         if (codigo == null || codigo.isEmpty()) return null;
