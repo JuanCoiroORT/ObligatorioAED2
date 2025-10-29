@@ -56,11 +56,7 @@ public class Main {
         System.out.println("¿Medicamento con código 00000 encontrado? " + encontrado2); // False
 
         // Buscar medicamentos por nombre (existente y no existente)
-        boolean encontrado3 = sistema.getArbolMedicamentos().buscarNombre("Paracetamol");
-        System.out.println("¿Medicamento con nombre 'Paracetamol' encontrado? " + encontrado3); // True
 
-        boolean encontrado4 = sistema.getArbolMedicamentos().buscarNombre("Penicilina");
-        System.out.println("¿Medicamento con nombre 'Penicilina' encontrado? " + encontrado4); // False*/
 
 
     }

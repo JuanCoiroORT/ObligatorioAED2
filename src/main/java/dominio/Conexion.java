@@ -58,14 +58,12 @@ public class Conexion {
         this.costo = costo;
     }
 
-    // Metodo para representar la conexión de manera legible
     @Override
     public String toString() {
         return "Conexión [Origen: " + codigoOrigen + ", Destino: " + codigoDestino +
                 ", Tiempo: " + tiempo + " mins, Distancia: " + distancia + " m, Costo: " + costo + " pesos]";
     }
 
-    // Metodo para comparar si dos conexiones son iguales (por codigoOrigen y codigoDestino)
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
@@ -74,9 +72,9 @@ public class Conexion {
         return codigoOrigen.equals(conexion.codigoOrigen) && codigoDestino.equals(conexion.codigoDestino);
     }
 
-    // Metodo hashCode para generar un codigo unico basado en los codigos de las farmacias
     @Override
     public int hashCode() {
         return 31 * codigoOrigen.hashCode() + codigoDestino.hashCode();
     }
+
 }

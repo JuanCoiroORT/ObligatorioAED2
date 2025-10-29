@@ -8,23 +8,23 @@ import interfaz.Retorno;
 import tads.ABB;
 import interfaz.Sistema;
 import tads.Cola;
+import tads.Lista;
+import tads.Nodo;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class ImplementacionSistema implements Sistema  {
 
     private boolean sistemaInicializado = false;
     private int maxFarmacias;
-    private int farmaciasRegistradas = 0;  // Contador de las farmacias registradas
-    private Farmacia[] farmacias;
+    private Lista<Farmacia> farmacias;
 
     //Dos árboles, uno por código y otro por nombre
     private ABB<Medicamento> arbolMedicamentosPorCodigo;
     private ABB<Medicamento> arbolMedicamentosPorNombre;
 
-    private Conexion[] conexiones;
+    // Grafo de farmacias: clave = código de farmacia, valor = lista de conexiones
+    private Map<String, Lista<Conexion>> conexiones;
     private int maxConexiones = 200;
     private int conexionesRegistradas = 0;
 
@@ -38,13 +38,12 @@ public class ImplementacionSistema implements Sistema  {
             return Retorno.error1("El numero de farmacias debe ser mayor que 3.");
         }
         this.maxFarmacias = maxFarmacias;
-        this.farmaciasRegistradas = 0;
         this.sistemaInicializado = true;
 
-        conexiones = new Conexion[maxFarmacias];
-
         //Inicializacion de las estructuras
-        this.farmacias = new Farmacia[maxFarmacias];
+        this.farmacias = new Lista<Farmacia>();
+        // Se crea grafo vacio de adyacencias
+        this.conexiones = new HashMap<>();
         // El arbol no se inicializa en el constructor para respetar la no existencia
         // del sistema hasta llamar a este metodo.
         this.arbolMedicamentosPorCodigo = new ABB<>(Comparator.comparing(Medicamento::getCodigo));
@@ -240,7 +239,7 @@ public class ImplementacionSistema implements Sistema  {
     }
 
     @Override
-    public Retorno listarMedicamentosPorCategoría(Categoria unaCategoria) {
+    public Retorno listarMedicamentosPorCategoria(Categoria unaCategoria) {
         if(unaCategoria == null){
             return Retorno.ok("No existe una categoria.");
         }
@@ -269,160 +268,526 @@ public class ImplementacionSistema implements Sistema  {
         if(codigo == null || codigo.isEmpty() || nombre == null || nombre.isEmpty()){
             return Retorno.error2("El codigo y el nombre no pueden ser vacios o nulos.");
         }
-        if(farmaciasRegistradas >= maxFarmacias){
+        if(farmacias.getLargo() >= maxFarmacias){
             return Retorno.error1("Ya se alcanzo el maximo de farmacias registradas.");
         }
 
-        for(int i = 0; i < farmaciasRegistradas; i++){
-            if(farmacias[i].getCodigo().equals(codigo)){
-                return Retorno.error3("Ya existe una farmacia con ese codigo.");
+        Nodo<Farmacia> nodo = farmacias.getInicio();
+        while (nodo != null) {
+            if (nodo.getDato().getCodigo().equals(codigo)) {
+                return Retorno.error3("Ya existe una farmacia con ese código.");
             }
+            nodo = nodo.getSiguiente();
         }
 
         Farmacia nueva = new Farmacia(codigo, nombre);
-        farmacias[farmaciasRegistradas] = nueva;
-        farmaciasRegistradas++;
+        farmacias.agregarInicio(nueva);  // o usar agregarFinal si querés mantener orden
         return Retorno.ok("Farmacia registrada correctamente.");
     }
 
     @Override
     public Retorno registrarConexion(String codigoOrigen, String codigoDestino, int tiempo, int distancia, int costo) {
-        //1-Validar parametros
-        if(codigoOrigen == null || codigoOrigen.isEmpty() || codigoDestino == null || codigoDestino.isEmpty()){
-            return Retorno.error2("Los codigos no pueden ser vacios.");
+        //1--Validaciones
+        if (codigoOrigen == null || codigoOrigen.isEmpty()) {
+            return Retorno.error2("Los codigos no pueden ser vacios o  nulos.");
+        }
+        if (tiempo <= 0 || distancia <= 0 || costo <= 0) {
+            return Retorno.error1("Los valores de tiempo, distancia y costo deben ser mayores que cero.");
         }
 
-        //2- Validar parametros numericos
-        if(tiempo <= 0 || distancia <= 0 || costo <= 0){
-            return Retorno.error1("El tiempo, distancia y costo deben ser mayores que 0.");
-        }
-
-        //3- Buscar farmacias de origen y destino
-        Farmacia origen = buscarFarmaciaPorCodigo(codigoOrigen);
-        Farmacia destino = buscarFarmaciaPorCodigo(codigoDestino);
-
-        if(origen == null){
+        //2--Verificar que los vertices existan
+        if(!conexiones.containsKey(codigoOrigen)){
             return Retorno.error2("No existe la farmacia de origen.");
         }
-
-        if(destino == null){
+        if(!conexiones.containsKey(codigoDestino)){
             return Retorno.error2("No existe la farmacia de destino.");
         }
 
-        //4- Verificar si ya existe la conexion
-        for (Conexion c : conexiones) {
-            if ((c.getCodigoDestino().equals(origen.getCodigo()) && c.getCodigoDestino().equals(destino.getCodigo())) ||
-                    (c.getCodigoOrigen().equals(destino.getCodigo()) && c.getCodigoDestino().equals(origen.getCodigo()))) {
-                return Retorno.error5("Ya existe una conexión entre esas farmacias.");
+        Lista<Conexion> listaOrigen = conexiones.get(codigoOrigen);
+        Lista<Conexion> listaDestino = conexiones.get(codigoDestino);
+
+        //3--Verificar que no exista ya la conexion
+        Nodo<Conexion> nodo = listaOrigen.getInicio();
+        while (nodo != null) {
+            if (nodo.getDato().getCodigoDestino().equals(codigoDestino)) {
+                return Retorno.error1("Ya existe una conexión entre estas farmacias.");
             }
+            nodo = nodo.getSiguiente();
         }
 
-        //5- Verificar si hay espacio en e array para dos conexiones
-        if(conexionesRegistradas + 2 > maxConexiones){
-            return Retorno.error1("no hay espacio para registrar mas conexiones.");
-        }
+        //4--Crear arista y agregar a ambos lados(grafo no dirigido)
+        Conexion aristaOrigen = new Conexion(codigoDestino, codigoDestino, tiempo, distancia, costo);
+        Conexion aristaDestino = new Conexion(codigoOrigen, codigoDestino, tiempo, distancia, costo);
 
-        //6- Crear  y registrar conexiones bidireccionales
-        Conexion conexionAB = new Conexion(codigoOrigen, codigoDestino, tiempo, distancia, costo);
-        Conexion conexionBA = new Conexion(codigoDestino, codigoOrigen, tiempo, distancia, costo);
+        listaOrigen.agregarInicio(aristaOrigen);
+        listaDestino.agregarInicio(aristaDestino);
 
-        conexiones[conexionesRegistradas] = conexionAB;
-        conexiones[conexionesRegistradas + 1] = conexionBA;
-        conexionesRegistradas += 2;
-
-        return Retorno.ok("Conexion registrada exitosamente entre " + origen.getNombre() + " y " + destino.getNombre());
+        return Retorno.ok("Conexión registrada correctamente.");
     }
 
-    //Metodo auxiliar
-    //Buscar una farmacia por codigo en el array de farmacias
-    private Farmacia buscarFarmaciaPorCodigo(String codigo) {
-        for (int i = 0; i < farmaciasRegistradas; i++) {
-            if(farmacias[i].getCodigo().equals(codigo)){
-                return farmacias[i];
+    private Farmacia buscarFarmaciaPorCodigo(String codigo){
+        if (codigo == null || codigo.isEmpty()) return null;
+
+        Nodo<Farmacia> nodo = farmacias.getInicio();
+        while (nodo != null) {
+            if (nodo.getDato().getCodigo().equals(codigo)) {
+                return nodo.getDato();
             }
+            nodo = nodo.getSiguiente();
         }
+
         return null;
     }
 
     @Override
-    public Retorno redFarmaciasPorCantidadDeConexiones(String codigoOrigen, int cantidad) {
+    public Retorno redFarmaciasPorCantidadDeConexiones(String codigoOrigen, int cantidad){
         //1--Validaciones
-        if(codigoOrigen == null || codigoOrigen.isEmpty()){
-            return Retorno.error2("Los codigos no pueden ser vacios o  nulos.");
+        if (cantidad < 0) {
+            return Retorno.error1("La cantidad no puede ser menor que cero.");
         }
-        if(cantidad < 0){
-            return Retorno.error1("La cantidad de conexiones no puede ser menor a 0.");
+        if (codigoOrigen == null || codigoOrigen.isEmpty()) {
+            return Retorno.error2("El código no puede ser vacío o null.");
         }
-
-        //2- Buscar farmacia de origen
-        Farmacia origen = null;
-        int idxOrigen = -1;
-        for(int i = 0; i < farmaciasRegistradas; i++){
-            if(farmacias[i].getCodigo().equals(codigoOrigen)){
-                origen = farmacias[i];
-                idxOrigen = i;
-                break;
-            }
+        if (!conexiones.containsKey(codigoOrigen)) {
+            return Retorno.error3("La farmacia de origen no está registrada.");
         }
-        if(origen == null){
-            return Retorno.error3("No existe la farmacia de origen.");
-        }
-        //3- Inicializar BFS
-        boolean[] visitados = new boolean[farmaciasRegistradas];
-        int[] niveles = new int[farmaciasRegistradas];
-        Cola<Farmacia> cola = new Cola<>(farmaciasRegistradas);
+        //2-- BFS para limitar profundidad por cantidad de conexiones
+        Set<String> visitados = new HashSet<>();
+        Queue<String> cola = new LinkedList<>();
+        Map<String, Integer> profundidad = new HashMap<>();
 
-        cola.push(origen);
-        visitados[idxOrigen] = true;
-        niveles[idxOrigen] = 0;
+        visitados.add(codigoOrigen);
+        profundidad.put(codigoOrigen, 0);
+        cola.add(codigoOrigen);
 
-        //4- BFS (Breadth-First Search)
-        while(!cola.isEmpty()){
-            Farmacia actual = cola.pop();
-            int nivelActual = 0;
-            int idxActual = -1;
+        List<Farmacia> alcanzables = new ArrayList<>();
 
-            //Obtener indice y nivel de la farmacia actual
-            for(int i = 0; i < farmaciasRegistradas; i++){
-                if(farmacias[i].equals(actual)){
-                    idxActual = i;
-                    nivelActual = niveles[i];
-                    break;
+        while (!cola.isEmpty()) {
+            String actual = cola.poll();
+            int nivel = profundidad.get(actual);
+
+            if (nivel == cantidad) continue;
+
+            Lista<Conexion> listaConexion = conexiones.get(actual);
+            Nodo<Conexion> aux = listaConexion.getInicio();
+
+            while (aux != null) {
+                String codDestino = aux.getDato().getCodigoDestino();
+
+                if (!visitados.contains(codDestino)) {
+                    visitados.add(codDestino);
+                    profundidad.put(codDestino, nivel + 1);
+                    cola.add(codDestino);
+
+                    // Agregar la farmacia encontrada, no incluir la origen
+                    if (!codDestino.equals(codigoOrigen)) {
+                        alcanzables.add(buscarFarmaciaPorCodigo(codDestino));
+                    }
                 }
-            }
-
-            if(nivelActual >= cantidad) continue;
-
-            //Explorar vecinos
-            for(int i = 0; i < farmaciasRegistradas; i++){
-                Conexion conexion = conexiones[i];
-                Farmacia vecino = null;
-
-                if(conexion.getCodigoOrigen().equals(actual.getCodigo())) vecino.setCodigo(conexion.getCodigoDestino());
-
-                else if(conexion.getCodigoDestino().equals(actual.getCodigo())){}
+                aux = aux.getSiguiente();
             }
         }
+        //3-- Orden lexicografico por codigo
+        alcanzables.sort(Comparator.comparing(Farmacia::getCodigo));
+
+        //4-- Formatear el valor String
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < alcanzables.size(); i++) {
+            Farmacia f = alcanzables.get(i);
+            sb.append(f.getCodigo()).append(";")
+                    .append(f.getNombre()).append(";");
+            if (i < alcanzables.size() - 1) {
+                sb.append("|");
+            }
+        }
+
+        return Retorno.ok(sb.toString());
     }
+
+
 
     @Override
     public Retorno analizarFarmacia(String codigoOrigen) {
-        return Retorno.noImplementada();
+
+        //1--Validaciones
+        if (codigoOrigen == null || codigoOrigen.isEmpty()) {
+            return Retorno.error1("El código no puede ser vacío o nulo.");
+        }
+
+        if (buscarFarmaciaPorCodigo(codigoOrigen) == null) {
+            return Retorno.error2("No existe la farmacia con ese código.");
+        }
+
+        //2--Preparar BFS ignorando la farmacia a analizar
+        Cola<String> cola = new Cola<>(farmacias.getLargo());
+        Lista<String> visitados = new Lista<>();
+
+        //Elegir un nodo inicial distinto al ignorado
+        String primerNodo = null;
+        Nodo<Farmacia> nodoF = farmacias.getInicio();
+        while (nodoF != null) {
+            if(!nodoF.getDato().getCodigo().equals(codigoOrigen)) {
+                primerNodo = nodoF.getDato().getCodigo();
+                break;
+            }
+            nodoF = nodoF.getSiguiente();
+        }
+
+        if(primerNodo == null) return Retorno.ok("NO");
+
+        //3--BFS
+        cola.push(primerNodo);
+        visitados.agregarInicio(primerNodo);
+
+        while (!cola.isEmpty()) {
+            String actual = cola.pop();
+            Lista<Conexion> listaConex = conexiones.get(actual);
+            Nodo<Conexion> nodoCon = listaConex.getInicio();
+
+            while (nodoCon != null) {
+                String destino = nodoCon.getDato().getCodigoDestino();
+                if (!destino.equals(codigoOrigen) && !visitados.existe(destino)) {
+                    visitados.agregarInicio(destino);
+                    cola.push(destino);
+                }
+                nodoCon = nodoCon.getSiguiente();
+            }
+        }
+
+        //4--Comparar cantidad de nodos alcanzables
+        if (visitados.getLargo() < farmacias.getLargo() - 1) {
+            return Retorno.ok("SI"); // Es critica
+        } else {
+            return Retorno.ok("NO"); // No es critica
+        }
     }
 
     @Override
     public Retorno calcularRutaMenorTiempo(String codigoOrigen, String codigoDestino) {
-        return Retorno.noImplementada();
+        //1-- Validaciones
+        if (codigoOrigen == null || codigoOrigen.isEmpty() ||
+                codigoDestino == null || codigoDestino.isEmpty()) {
+            return Retorno.error1("Los códigos no pueden ser vacíos o nulos.");
+        }
+
+        Farmacia fOrigen = buscarFarmaciaPorCodigo(codigoOrigen);
+        Farmacia fDestino = buscarFarmaciaPorCodigo(codigoDestino);
+
+        if (fOrigen == null) return Retorno.error2("No existe la farmacia de origen.");
+        if (fDestino == null) return Retorno.error3("No existe la farmacia de destino.");
+
+        //2--Inicializar estructuras
+        Lista<String> visitados = new Lista<>();
+        Lista<String> porVisitar = new Lista<>();
+        Lista<String> caminoPrevio = new Lista<>(); //mantiene el camino anterior anterior en cada nodo
+        Lista<Integer> distancias = new Lista<>(); // distancia acumulada desde el origen
+
+        // Inicializar todos los nodos con distancia infinita
+        Nodo<Farmacia> nodoF = farmacias.getInicio();
+        while (nodoF != null) {
+            String cod = nodoF.getDato().getCodigo();
+            porVisitar.agregarInicio(cod);
+            distancias.agregarInicio(Integer.MAX_VALUE);
+            caminoPrevio.agregarInicio(null);
+            nodoF = nodoF.getSiguiente();
+        }
+
+        // Distancia del nodo origen = 0
+        Nodo<String> n = porVisitar.getInicio();
+        Nodo<Integer> d = distancias.getInicio();
+        Nodo<String> cPrev = caminoPrevio.getInicio();
+        while (n != null) {
+            if (n.getDato().equals(codigoOrigen)) {
+                d.setDato(0);
+                break;
+            }
+            n = n.getSiguiente();
+            d = d.getSiguiente();
+            cPrev = cPrev.getSiguiente();
+        }
+
+        //3-- Dijkstra
+        while (!porVisitar.esVacia()) {
+            // Buscar nodo con distancia mínima
+            Nodo<String> nActual = porVisitar.getInicio();
+            Nodo<Integer> dActual = distancias.getInicio();
+            Nodo<String> cActual = caminoPrevio.getInicio();
+
+            Nodo<String> minNodo = nActual;
+            Nodo<Integer> minDist = dActual;
+            Nodo<String> minPrev = cActual;
+
+            Nodo<String> tempN = nActual;
+            Nodo<Integer> tempD = dActual;
+            Nodo<String> tempC = cActual;
+
+            while (tempN != null) {
+                if (tempD.getDato() < minDist.getDato()) {
+                    minNodo = tempN;
+                    minDist = tempD;
+                    minPrev = tempC;
+                }
+                tempN = tempN.getSiguiente();
+                tempD = tempD.getSiguiente();
+                tempC = tempC.getSiguiente();
+            }
+
+            String nodoActualCodigo = minNodo.getDato();
+            int nodoActualDist = minDist.getDato();
+
+            if (nodoActualCodigo.equals(codigoDestino)) break; // llegamos al destino
+
+            // Recorrer vecinos
+            Lista<Conexion> vecinos = conexiones.get(nodoActualCodigo);
+            Nodo<Conexion> arista = vecinos.getInicio();
+            while (arista != null) {
+                String vecino = arista.getDato().getCodigoDestino();
+
+                // Si vecino no visitado
+                if (!visitados.existe(vecino)) {
+                    // Buscar nodo vecino en porVisitar y distancias
+                    Nodo<String> tN = porVisitar.getInicio();
+                    Nodo<Integer> tD = distancias.getInicio();
+                    Nodo<String> tC = caminoPrevio.getInicio();
+                    while (tN != null) {
+                        if (tN.getDato().equals(vecino)) {
+                            int nuevaDist = nodoActualDist + arista.getDato().getTiempo();
+                            if (nuevaDist < tD.getDato()) {
+                                tD.setDato(nuevaDist);
+                                tC.setDato(nodoActualCodigo);
+                            }
+                            break;
+                        }
+                        tN = tN.getSiguiente();
+                        tD = tD.getSiguiente();
+                        tC = tC.getSiguiente();
+                    }
+                }
+                arista = arista.getSiguiente();
+            }
+
+            // Marcar nodoActual como visitado
+            visitados.agregarInicio(nodoActualCodigo);
+            // Eliminar de porVisitar
+            porVisitar.eliminarDato(nodoActualCodigo);
+        }
+
+        //4-- Reconstruir camino desde destino
+        Lista<Farmacia> camino = new Lista<>();
+        String nodo = codigoDestino;
+        while (nodo != null) {
+            Farmacia f = buscarFarmaciaPorCodigo(nodo);
+            if (f == null) break;
+            camino.agregarInicio(f);
+
+            // Buscar previo en caminoPrevio
+            Nodo<String> tC = caminoPrevio.getInicio();
+            String previo = null;
+            while (tC != null) {
+                if (tC.getDato().equals(nodo)) {
+                    previo = tC.getDato();
+                    break;
+                }
+                tC = tC.getSiguiente();
+            }
+            if (nodo.equals(codigoOrigen)) break;
+            nodo = previo;
+        }
+
+        if (camino.getInicio() == null || !camino.getInicio().getDato().getCodigo().equals(codigoOrigen)) {
+            return Retorno.error4("No existe un camino posible entre las farmacias.");
+        }
+
+        //5--Construir valor String
+        StringBuilder valorString = new StringBuilder();
+        Nodo<Farmacia> nCamino = camino.getInicio();
+        while (nCamino != null) {
+            Farmacia f = nCamino.getDato();
+            if (valorString.length() > 0) valorString.append("|");
+            valorString.append(f.getCodigo()).append(";")
+                    .append(f.getNombre()).append(";");
+            nCamino = nCamino.getSiguiente();
+        }
+
+        //6-- Tiempo total
+        int totalTiempo = 0;
+        // Buscar distancia acumulada del destino
+        Nodo<String> nDist = caminoPrevio.getInicio();
+        Nodo<Integer> dDist = distancias.getInicio();
+        while (nDist != null) {
+            if (nDist.getDato().equals(codigoDestino)) {
+                totalTiempo = dDist.getDato();
+                break;
+            }
+            nDist = nDist.getSiguiente();
+            dDist = dDist.getSiguiente();
+        }
+
+        return Retorno.ok(totalTiempo, valorString.toString());
     }
 
     @Override
     public Retorno calcularRutaMenorDistancia(String codigoOrigen, String codigoDestino) {
-        return Retorno.noImplementada();
-    }
+        //1--Validaciones
+        if (codigoOrigen == null || codigoOrigen.isEmpty() ||
+                codigoDestino == null || codigoDestino.isEmpty()) {
+            return Retorno.error1("Los códigos no pueden ser vacíos o nulos.");
+        }
 
-    // metodo publico para acceder al arbol desde el main
-    public ABB<Medicamento> getArbolMedicamentos() {
-        return arbolMedicamentosPorCodigo;
+        Farmacia fOrigen = buscarFarmaciaPorCodigo(codigoOrigen);
+        Farmacia fDestino = buscarFarmaciaPorCodigo(codigoDestino);
+
+        if (fOrigen == null) return Retorno.error2("No existe la farmacia de origen.");
+        if (fDestino == null) return Retorno.error3("No existe la farmacia de destino.");
+
+        //2-- inicializar estructuras
+        Lista<String> visitados = new Lista<>();
+        Lista<String> porVisitar = new Lista<>();
+        Lista<Integer> distancias = new Lista<>();
+        Lista<String> caminoPrevio = new Lista<>();
+
+        // Inicializar: todos los nodos con distancia infinita
+        Nodo<Farmacia> nodoF = farmacias.getInicio();
+        while (nodoF != null) {
+            String cod = nodoF.getDato().getCodigo();
+            porVisitar.agregarInicio(cod);
+            distancias.agregarInicio(Integer.MAX_VALUE);
+            caminoPrevio.agregarInicio(null);
+            nodoF = nodoF.getSiguiente();
+        }
+
+        // Distancia del origen = 0
+        Nodo<String> n = porVisitar.getInicio();
+        Nodo<Integer> d = distancias.getInicio();
+        Nodo<String> cPrev = caminoPrevio.getInicio();
+        while (n != null) {
+            if (n.getDato().equals(codigoOrigen)) {
+                d.setDato(0);
+                break;
+            }
+            n = n.getSiguiente();
+            d = d.getSiguiente();
+            cPrev = cPrev.getSiguiente();
+        }
+
+        //3--Dijkstra
+        while (!porVisitar.esVacia()) {
+            // Buscar nodo con distancia mínima
+            Nodo<String> nActual = porVisitar.getInicio();
+            Nodo<Integer> dActual = distancias.getInicio();
+            Nodo<String> cActual = caminoPrevio.getInicio();
+
+            Nodo<String> minNodo = nActual;
+            Nodo<Integer> minDist = dActual;
+            Nodo<String> minPrev = cActual;
+
+            Nodo<String> tempN = nActual;
+            Nodo<Integer> tempD = dActual;
+            Nodo<String> tempC = cActual;
+
+            while (tempN != null) {
+                if (tempD.getDato() < minDist.getDato()) {
+                    minNodo = tempN;
+                    minDist = tempD;
+                    minPrev = tempC;
+                }
+                tempN = tempN.getSiguiente();
+                tempD = tempD.getSiguiente();
+                tempC = tempC.getSiguiente();
+            }
+
+            String nodoActualCodigo = minNodo.getDato();
+            int nodoActualDist = minDist.getDato();
+
+            if (nodoActualCodigo.equals(codigoDestino)) break; // llegamos al destino
+
+            // Recorrer vecinos
+            Lista<Conexion> vecinos = conexiones.get(nodoActualCodigo);
+            Nodo<Conexion> arista = vecinos.getInicio();
+            while (arista != null) {
+                String vecino = arista.getDato().getCodigoDestino();
+
+                // Si vecino no visitado
+                if (!visitados.existe(vecino)) {
+                    // Buscar nodo vecino en porVisitar y distancias
+                    Nodo<String> tN = porVisitar.getInicio();
+                    Nodo<Integer> tD = distancias.getInicio();
+                    Nodo<String> tC = caminoPrevio.getInicio();
+                    while (tN != null) {
+                        if (tN.getDato().equals(vecino)) {
+                            int nuevaDist = nodoActualDist + arista.getDato().getDistancia(); // ✅ sumamos distancia
+                            if (nuevaDist < tD.getDato()) {
+                                tD.setDato(nuevaDist);
+                                tC.setDato(nodoActualCodigo);
+                            }
+                            break;
+                        }
+                        tN = tN.getSiguiente();
+                        tD = tD.getSiguiente();
+                        tC = tC.getSiguiente();
+                    }
+                }
+                arista = arista.getSiguiente();
+            }
+
+            // Marcar nodoActual como visitado
+            visitados.agregarInicio(nodoActualCodigo);
+            // Eliminar de porVisitar
+            porVisitar.eliminarDato(nodoActualCodigo);
+        }
+
+        //4--Reconstruir camino desde destino
+        Lista<Farmacia> camino = new Lista<>();
+        String nodo = codigoDestino;
+        while (nodo != null) {
+            Farmacia f = buscarFarmaciaPorCodigo(nodo);
+            if (f == null) break;
+            camino.agregarInicio(f);
+
+            // Buscar previo en caminoPrevio
+            Nodo<String> tC = caminoPrevio.getInicio();
+            String previo = null;
+            while (tC != null) {
+                if (tC.getDato().equals(nodo)) {
+                    previo = tC.getDato();
+                    break;
+                }
+                tC = tC.getSiguiente();
+            }
+            if (nodo.equals(codigoOrigen)) break;
+            nodo = previo;
+        }
+
+        if (camino.getInicio() == null || !camino.getInicio().getDato().getCodigo().equals(codigoOrigen)) {
+            return Retorno.error4("No existe un camino posible entre las farmacias.");
+        }
+
+        //5-- Construir valor string
+        StringBuilder valorString = new StringBuilder();
+        Nodo<Farmacia> nCamino = camino.getInicio();
+        while (nCamino != null) {
+            Farmacia f = nCamino.getDato();
+            if (valorString.length() > 0) valorString.append("|");
+            valorString.append(f.getCodigo()).append(";")
+                    .append(f.getNombre()).append(";");
+            nCamino = nCamino.getSiguiente();
+        }
+
+        //6--Total distancia
+        int totalDistancia = 0;
+        // Buscar distancia acumulada del destino
+        Nodo<String> nDist = porVisitar.getInicio();
+        Nodo<Integer> dDist = distancias.getInicio();
+        while (nDist != null) {
+            if (nDist.getDato().equals(codigoDestino)) {
+                totalDistancia = dDist.getDato();
+                break;
+            }
+            nDist = nDist.getSiguiente();
+            dDist = dDist.getSiguiente();
+        }
+
+        return Retorno.ok(totalDistancia, valorString.toString());
     }
 
 

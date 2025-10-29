@@ -14,11 +14,13 @@ public interface Sistema {
     Retorno buscarMedicamentoPorNombre(String nombre);
     Retorno listarMedicamentosPorNombreAscendente();
     Retorno listarMedicamentosPorNombreDescendente();
-    Retorno listarMedicamentosPorCategoría(Categoria unaCategoria);
+    Retorno listarMedicamentosPorCategoria(Categoria unaCategoria);
     Retorno registrarFarmacia(String codigo, String nombre);
     Retorno registrarConexion(String codigoOrigen, String codigoDestino, int tiempo, int distancia, int costo);
-    Retorno redFarmaciasPorCantidadDeConexiones(String codigoOrigen, int cantidad);
     Retorno analizarFarmacia(String codigoOrigen);
+
+    Retorno redFarmaciasPorCantidadDeConexiones(String codigoOrigen, int cantidad);
+
     Retorno calcularRutaMenorTiempo(String codigoOrigen, String codigoDestino);
     Retorno calcularRutaMenorDistancia(String codigoOrigen, String codigoDestino);
 

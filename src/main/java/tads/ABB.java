@@ -10,15 +10,11 @@ public class ABB<T extends Comparable<T>> {
 
     private Nodo raiz;
     private Comparator<T> comparator;
+    private List<Medicamento> lista;
 
     public ABB(Comparator<T> comparator) {
         this.comparator = comparator;
-    }
-
-    private class Nodo {
-        T valor;
-        Nodo izquierdo, derecho;
-        Nodo(T valor){this.valor = valor;}
+        this.raiz = null;
     }
 
 
@@ -37,10 +33,14 @@ public class ABB<T extends Comparable<T>> {
             return new Nodo(valor);
         }
 
-        int cmp = comparator.compare(valor, nodo.valor);
+        int cmp = comparator.compare(valor, (T) nodo.getDato());
 
-        if(cmp < 0) nodo.izquierdo = insertarRec(nodo.izquierdo, valor);
-        else if (cmp > 0) nodo.derecho = insertarRec(nodo.derecho, valor);
+        if(cmp < 0) {
+            nodo.setIzquierdo(insertarRec(nodo.getIzquierdo(), valor));
+        }
+        else if (cmp > 0){
+            nodo.setDerecho(insertarRec(nodo.getDerecho(), valor));
+        }
 
         return nodo;
     }
@@ -55,11 +55,11 @@ public class ABB<T extends Comparable<T>> {
             return false;
         }
 
-        int cmp = comparator.compare(valor, nodo.valor);
+        int cmp = comparator.compare(valor, (T) nodo.getDato());
 
         if(cmp == 0) return true;
-        else if(cmp > 0) return buscarRec(nodo.izquierdo, valor);
-        else return buscarRec(nodo.derecho, valor);
+        else if(cmp > 0) return buscarRec(nodo.getIzquierdo(), valor);
+        else return buscarRec(nodo.getDerecho(), valor);
     }
 
     // recorrido en orden (in-order traversal)
@@ -69,9 +69,9 @@ public class ABB<T extends Comparable<T>> {
 
     private void recorrerInOrdenRec(Nodo nodo) {
         if (nodo != null) {
-            recorrerInOrdenRec(nodo.izquierdo);
-            System.out.print(nodo.valor + " ");
-            recorrerInOrdenRec(nodo.derecho);
+            recorrerInOrdenRec(nodo.getIzquierdo());
+            System.out.print(nodo.getDato() + " ");
+            recorrerInOrdenRec(nodo.getDerecho());
         }
     }
 
@@ -84,62 +84,70 @@ public class ABB<T extends Comparable<T>> {
     }
 
     public T buscarConRecorridos(T valor, Contador contador) {
-        return buscarConRecorridosRec(raiz, valor, contador);
+        return (T) buscarConRecorridosRec(raiz, valor, contador);
     }
 
-    private T buscarConRecorridosRec(Nodo nodo, T valor, Contador contador) {
+    private T buscarConRecorridosRec(Nodo<T> nodo, T valor, Contador contador) {
         if (nodo == null) return null;
+
         contador.incrementar();
-        int cmp = comparator.compare(valor, nodo.valor);
-        if (cmp == 0) return nodo.valor;
-        else if (cmp < 0) return buscarConRecorridosRec(nodo.izquierdo, valor, contador);
-        else return buscarConRecorridosRec(nodo.derecho, valor, contador);
+        int cmp = comparator.compare(valor, nodo.getDato());
+
+        if (cmp == 0) return nodo.getDato();
+        else if (cmp < 0) return buscarConRecorridosRec(nodo.getIzquierdo(), valor, contador);
+        else return buscarConRecorridosRec(nodo.getDerecho(), valor, contador);
     }
 
 
     // Metodo de recorrido inOrder que devuelve los elementos de la lista en orden ascendente por codigo
     public void listarInOrden(List<Medicamento> lista){
-        listarInOrdenRec(raiz, lista);
+        //this.lista = lista;
+        listarInOrdenRec(raiz, (Lista<Medicamento>) lista);
     }
 
-    private void listarInOrdenRec(Nodo nodo, List<Medicamento> lista){
-        if(nodo == null) return;
-        listarInOrdenRec(nodo.izquierdo, lista);
-        lista.add((Medicamento) nodo.valor);
-        listarInOrdenRec(nodo.derecho, lista);
+    private void listarInOrdenRec(Nodo<T> nodo, Lista<Medicamento> lista) {
+        if (nodo == null) return;
+
+        listarInOrdenRec(nodo.getIzquierdo(), lista);
+        lista.agregarFinal((Medicamento) nodo.getDato());
+        listarInOrdenRec(nodo.getDerecho(), lista);
     }
+
 
 
     //Metodo de recorrido inOrderDesc que devuelve los elementos de la lista en orden ascendente pos codigo
     public void listarInOrdenDesc(List<Medicamento> lista){
-        listarInOrdenDescRec(raiz, lista);
+        listarInOrdenDescRec(raiz, (Lista<Medicamento>) lista);
     }
 
-    private void listarInOrdenDescRec(Nodo nodo, List<Medicamento> lista){
-        if(nodo == null) return;
-        listarInOrdenDescRec(nodo.derecho, lista); // primero derecho, donde van los mayores
-        lista.add((Medicamento) nodo.valor);
-        listarInOrdenDescRec(nodo.izquierdo, lista);
+    private void listarInOrdenDescRec(Nodo<T> nodo, Lista<Medicamento> lista) {
+        if (nodo == null) return;
+
+        listarInOrdenDescRec(nodo.getDerecho(), lista);
+        lista.agregarFinal((Medicamento) nodo.getDato());
+        listarInOrdenDescRec(nodo.getIzquierdo(), lista);
     }
+
 
 
     //Metodo para listar por categoria recorriendo el arbol en orden creciente
     public void listarPorCategoria(Categoria categoria, List<Medicamento> lista){
-        listarPorCategoriaRec(raiz, categoria, lista);
+        listarPorCategoriaRec(raiz, categoria, (Lista<Medicamento>) lista);
     }
 
-    private void listarPorCategoriaRec(Nodo nodo, Categoria categoria, List<Medicamento> lista){
-        if(nodo == null) return;
+    private void listarPorCategoriaRec(Nodo<T> nodo, Categoria categoria, Lista<Medicamento> lista) {
+        if (nodo == null) return;
 
-        listarPorCategoriaRec(nodo.izquierdo, categoria, lista);
+        listarPorCategoriaRec(nodo.getIzquierdo(), categoria, lista);
 
-        Medicamento med = (Medicamento) nodo.valor;
+        Medicamento med = (Medicamento) nodo.getDato();
+        if (med.getCategoria().equals(categoria)) {
+            lista.agregarFinal(med);
+        }
 
-        if(med.getCategoria().equals(categoria)) lista.add(med);
-
-        listarPorCategoriaRec(nodo.derecho, categoria, lista);
-
+        listarPorCategoriaRec(nodo.getDerecho(), categoria, lista);
     }
+
 
 
 
