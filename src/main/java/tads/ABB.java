@@ -4,78 +4,65 @@ import dominio.Medicamento;
 import interfaz.Categoria;
 
 import java.util.Comparator;
-import java.util.List;
 
 public class ABB<T extends Comparable<T>> {
 
     private Nodo raiz;
     private Comparator<T> comparator;
-    private List<Medicamento> lista;
 
     public ABB(Comparator<T> comparator) {
         this.comparator = comparator;
         this.raiz = null;
     }
 
+    private class Nodo {
+        private T dato;
+        private Nodo izquierdo;
+        private Nodo derecho;
 
-    //Metodo para validar que un arbol este vacio
-    public boolean isEmpty(){
+        public Nodo(T dato) {
+            this.dato = dato;
+            this.izquierdo = null;
+            this.derecho = null;
+        }
+
+        public T getDato() { return dato; }
+        public Nodo getIzquierdo() { return izquierdo; }
+        public Nodo getDerecho() { return derecho; }
+        public void setIzquierdo(Nodo izquierdo) { this.izquierdo = izquierdo; }
+        public void setDerecho(Nodo derecho) { this.derecho = derecho; }
+    }
+
+    public boolean isEmpty() {
         return raiz == null;
     }
 
-    // insertar un valor en el arbol
     public void insertar(T valor) {
         raiz = insertarRec(raiz, valor);
     }
 
     private Nodo insertarRec(Nodo nodo, T valor) {
-        if (nodo == null) {
-            return new Nodo(valor);
-        }
+        if (nodo == null) return new Nodo(valor);
 
-        int cmp = comparator.compare(valor, (T) nodo.getDato());
-
-        if(cmp < 0) {
-            nodo.setIzquierdo(insertarRec(nodo.getIzquierdo(), valor));
-        }
-        else if (cmp > 0){
-            nodo.setDerecho(insertarRec(nodo.getDerecho(), valor));
-        }
+        int cmp = comparator.compare(valor, nodo.getDato());
+        if (cmp < 0) nodo.setIzquierdo(insertarRec(nodo.getIzquierdo(), valor));
+        else if (cmp > 0) nodo.setDerecho(insertarRec(nodo.getDerecho(), valor));
 
         return nodo;
     }
 
-    // buscar un valor en el arbol
     public boolean buscar(T valor) {
         return buscarRec(raiz, valor);
     }
 
     private boolean buscarRec(Nodo nodo, T valor) {
-        if (nodo == null) {
-            return false;
-        }
+        if (nodo == null) return false;
 
-        int cmp = comparator.compare(valor, (T) nodo.getDato());
-
-        if(cmp == 0) return true;
-        else if(cmp > 0) return buscarRec(nodo.getIzquierdo(), valor);
+        int cmp = comparator.compare(valor, nodo.getDato());
+        if (cmp == 0) return true;
+        else if (cmp < 0) return buscarRec(nodo.getIzquierdo(), valor);
         else return buscarRec(nodo.getDerecho(), valor);
     }
-
-    // recorrido en orden (in-order traversal)
-    public void recorrerInOrden() {
-        recorrerInOrdenRec(raiz);
-    }
-
-    private void recorrerInOrdenRec(Nodo nodo) {
-        if (nodo != null) {
-            recorrerInOrdenRec(nodo.getIzquierdo());
-            System.out.print(nodo.getDato() + " ");
-            recorrerInOrdenRec(nodo.getDerecho());
-        }
-    }
-
-
 
     public static class Contador {
         private int valor = 0;
@@ -84,28 +71,27 @@ public class ABB<T extends Comparable<T>> {
     }
 
     public T buscarConRecorridos(T valor, Contador contador) {
-        return (T) buscarConRecorridosRec(raiz, valor, contador);
+        return buscarConRecorridosRec(raiz, valor, contador);
     }
 
-    private T buscarConRecorridosRec(Nodo<T> nodo, T valor, Contador contador) {
+    private T buscarConRecorridosRec(Nodo nodo, T valor, Contador contador) {
         if (nodo == null) return null;
 
         contador.incrementar();
         int cmp = comparator.compare(valor, nodo.getDato());
 
-        if (cmp == 0) return nodo.getDato();
+        if (cmp == 0) return (T) nodo.getDato();
         else if (cmp < 0) return buscarConRecorridosRec(nodo.getIzquierdo(), valor, contador);
         else return buscarConRecorridosRec(nodo.getDerecho(), valor, contador);
     }
 
+    // =================== MÉTODOS CON tads.Lista ===================
 
-    // Metodo de recorrido inOrder que devuelve los elementos de la lista en orden ascendente por codigo
-    public void listarInOrden(List<Medicamento> lista){
-        //this.lista = lista;
-        listarInOrdenRec(raiz, (Lista<Medicamento>) lista);
+    public void listarInOrden(Lista<Medicamento> lista){
+        listarInOrdenRec(raiz, lista);
     }
 
-    private void listarInOrdenRec(Nodo<T> nodo, Lista<Medicamento> lista) {
+    private void listarInOrdenRec(Nodo nodo, Lista<Medicamento> lista) {
         if (nodo == null) return;
 
         listarInOrdenRec(nodo.getIzquierdo(), lista);
@@ -113,14 +99,11 @@ public class ABB<T extends Comparable<T>> {
         listarInOrdenRec(nodo.getDerecho(), lista);
     }
 
-
-
-    //Metodo de recorrido inOrderDesc que devuelve los elementos de la lista en orden ascendente pos codigo
-    public void listarInOrdenDesc(List<Medicamento> lista){
-        listarInOrdenDescRec(raiz, (Lista<Medicamento>) lista);
+    public void listarInOrdenDesc(Lista<Medicamento> lista){
+        listarInOrdenDescRec(raiz, lista);
     }
 
-    private void listarInOrdenDescRec(Nodo<T> nodo, Lista<Medicamento> lista) {
+    private void listarInOrdenDescRec(Nodo nodo, Lista<Medicamento> lista) {
         if (nodo == null) return;
 
         listarInOrdenDescRec(nodo.getDerecho(), lista);
@@ -128,14 +111,11 @@ public class ABB<T extends Comparable<T>> {
         listarInOrdenDescRec(nodo.getIzquierdo(), lista);
     }
 
-
-
-    //Metodo para listar por categoria recorriendo el arbol en orden creciente
-    public void listarPorCategoria(Categoria categoria, List<Medicamento> lista){
-        listarPorCategoriaRec(raiz, categoria, (Lista<Medicamento>) lista);
+    public void listarPorCategoria(Categoria categoria, Lista<Medicamento> lista){
+        listarPorCategoriaRec(raiz, categoria, lista);
     }
 
-    private void listarPorCategoriaRec(Nodo<T> nodo, Categoria categoria, Lista<Medicamento> lista) {
+    private void listarPorCategoriaRec(Nodo nodo, Categoria categoria, Lista<Medicamento> lista) {
         if (nodo == null) return;
 
         listarPorCategoriaRec(nodo.getIzquierdo(), categoria, lista);
@@ -147,13 +127,4 @@ public class ABB<T extends Comparable<T>> {
 
         listarPorCategoriaRec(nodo.getDerecho(), categoria, lista);
     }
-
-
-
-
-
-
-
-
-
 }

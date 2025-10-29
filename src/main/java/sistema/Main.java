@@ -49,11 +49,11 @@ public class Main {
 
         Medicamento med = new Medicamento("12345", "Paracetamol", "2025-12-31", Categoria.VENTA_LIBRE);
         // Buscar medicamentos por codigo (existente y no existente)
-        boolean encontrado1 = sistema.getArbolMedicamentos().buscar(med);
-        System.out.println("¿Medicamento con código 12345 encontrado? " + encontrado1); // True
+        //boolean encontrado1 = sistema.getArbolMedicamentos().buscar(med);
+        //System.out.println("¿Medicamento con código 12345 encontrado? " + encontrado1); // True
 
-        boolean encontrado2 = sistema.getArbolMedicamentos().buscar(new Medicamento("00000", "Paracetamol", "2025-12-31", Categoria.VENTA_LIBRE));
-        System.out.println("¿Medicamento con código 00000 encontrado? " + encontrado2); // False
+        //boolean encontrado2 = sistema.getArbolMedicamentos().buscar(new Medicamento("00000", "Paracetamol", "2025-12-31", Categoria.VENTA_LIBRE));
+        //System.out.println("¿Medicamento con código 00000 encontrado? " + encontrado2); // False
 
         // Buscar medicamentos por nombre (existente y no existente)
 

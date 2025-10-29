@@ -117,25 +117,25 @@ public class ImplementacionSistema implements Sistema  {
 
     @Override
     public Retorno listarMedicamentosPorCodigoAscendente() {
-        if(arbolMedicamentosPorCodigo == null || arbolMedicamentosPorCodigo.isEmpty()){
+        if (arbolMedicamentosPorCodigo == null || arbolMedicamentosPorCodigo.isEmpty()) {
             return Retorno.ok("No hay medicamentos registrados.");
         }
 
-        //Lista para acumular los medicamentos
-        List<Medicamento> lista = new ArrayList<>();
+        // Lista para acumular los medicamentos usando tu TAD Lista
+        Lista<Medicamento> lista = new Lista<>();
         arbolMedicamentosPorCodigo.listarInOrden(lista);
 
-        // Armar el string con el formato requerido.
+        // Armar el string con el formato requerido
         StringBuilder sb = new StringBuilder();
 
-        for (int i = 0; i < lista.size(); i++){
-            Medicamento m = lista.get(i);
-            sb.append(m.getCodigo() + ";")
-                    .append(m.getNombre() + ";")
-                    .append(m.getFechaVencimiento() + ";")
+        for (int i = 0; i < lista.getLargo(); i++) {
+            Medicamento m = lista.obtenerPorIndice(i);
+            sb.append(m.getCodigo()).append(";")
+                    .append(m.getNombre()).append(";")
+                    .append(m.getFechaVencimiento()).append(";")
                     .append(m.getCategoria());
 
-            if(i < lista.size() - 1){
+            if (i < lista.largo() - 1) {
                 sb.append("|");
             }
         }
@@ -143,23 +143,24 @@ public class ImplementacionSistema implements Sistema  {
         return Retorno.ok(sb.toString());
     }
 
+
     @Override
     public Retorno listarMedicamentosPorCodigoDescendente() {
         if(arbolMedicamentosPorCodigo == null || arbolMedicamentosPorCodigo.isEmpty()){
             return Retorno.ok("No hay medicamentos registrados.");
         }
 
-        List<Medicamento> lista = new ArrayList<>();
+        Lista<Medicamento> lista = new Lista<Medicamento>();
         arbolMedicamentosPorCodigo.listarInOrdenDesc(lista);
 
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < lista.size(); i++){
-            Medicamento m = lista.get(i);
+        for (int i = 0; i < lista.getLargo(); i++){
+            Medicamento m = lista.obtenerPorIndice(i);
             sb.append(m.getCodigo() + ";")
                     .append(m.getNombre() + ";")
                     .append(m.getFechaVencimiento() + ";")
                     .append(m.getCategoria());
-            if(i < lista.size() - 1){
+            if(i < lista.largo() - 1){
                 sb.append("|");
             }
         }
@@ -198,18 +199,18 @@ public class ImplementacionSistema implements Sistema  {
         if(arbolMedicamentosPorNombre == null || arbolMedicamentosPorNombre.isEmpty()){
             return Retorno.ok("No hay medicamentos registrados.");
         }
-        List<Medicamento> lista = new ArrayList<>();
+        Lista<Medicamento> lista = new Lista<Medicamento>();
         arbolMedicamentosPorNombre.listarInOrden(lista);
 
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < lista.size(); i++){
-            Medicamento m = lista.get(i);
+        for (int i = 0; i < lista.getLargo(); i++){
+            Medicamento m = lista.obtenerPorIndice(i);
             sb.append(m.getCodigo() + ";")
                     .append(m.getNombre() + ";")
                     .append(m.getFechaVencimiento() + ";")
                     .append(m.getCategoria());
 
-            if(i < lista.size() - 1){
+            if(i < lista.getLargo() - 1){
                 sb.append("|");
             }
         }
@@ -221,17 +222,17 @@ public class ImplementacionSistema implements Sistema  {
         if(arbolMedicamentosPorNombre == null || arbolMedicamentosPorNombre.isEmpty()){
             return Retorno.ok("No hay medicamentos registrados.");
         }
-        List<Medicamento> lista = new ArrayList<>();
+        Lista<Medicamento> lista = new Lista<Medicamento>();
         arbolMedicamentosPorNombre.listarInOrdenDesc(lista);
 
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < lista.size(); i++){
-            Medicamento m = lista.get(i);
+        for (int i = 0; i < lista.getLargo(); i++){
+            Medicamento m = lista.obtenerPorIndice(i);
             sb.append(m.getCodigo() + ";")
                     .append(m.getNombre() + ";")
                     .append(m.getFechaVencimiento() + ";")
                     .append(m.getCategoria());
-            if(i < lista.size() - 1){
+            if(i < lista.getLargo() - 1){
                 sb.append("|");
             }
         }
@@ -246,17 +247,17 @@ public class ImplementacionSistema implements Sistema  {
         if(arbolMedicamentosPorCodigo == null || arbolMedicamentosPorCodigo.isEmpty()){
             return Retorno.ok("No hay medicamentos registrados.");
         }
-        List<Medicamento> lista = new ArrayList<>();
+        Lista<Medicamento> lista = new Lista<Medicamento>();
         arbolMedicamentosPorCodigo.listarPorCategoria(unaCategoria, lista);
 
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < lista.size(); i++){
-            Medicamento m = lista.get(i);
+        for (int i = 0; i < lista.getLargo(); i++){
+            Medicamento m = lista.obtenerPorIndice(i);
             sb.append(m.getCodigo() + ";")
                     .append(m.getNombre() + ";")
                     .append(m.getFechaVencimiento() + ";")
                     .append(m.getCategoria());
-            if(i < lista.size() - 1){
+            if(i < lista.getLargo() - 1){
                 sb.append("|");
             }
         }

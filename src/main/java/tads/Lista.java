@@ -17,6 +17,17 @@ public class Lista<T> {
         return largo;
     }
 
+    public T obtenerPorIndice(int index) {
+        if (index < 0 || index >= largo) {
+            throw new IndexOutOfBoundsException("Índice inválido: " + index);
+        }
+        Nodo<T> actual = inicio;
+        for (int i = 0; i < index; i++) {
+            actual = actual.getSiguiente();
+        }
+        return actual.getDato();
+    }
+
     public boolean esVacia() {
         return inicio == null;
     }

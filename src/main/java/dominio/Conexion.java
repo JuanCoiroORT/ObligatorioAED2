@@ -1,13 +1,12 @@
 package dominio;
 
-public class Conexion {
+public class Conexion<T> {
 
     private String codigoOrigen;
     private String codigoDestino;
     private int tiempo;     // en minutos
     private int distancia;  // en metros
     private int costo;      // en pesos
-
 
     public Conexion(String codigoOrigen, String codigoDestino, int tiempo, int distancia, int costo) {
         this.codigoOrigen = codigoOrigen;
@@ -16,7 +15,6 @@ public class Conexion {
         this.distancia = distancia;
         this.costo = costo;
     }
-
 
     public String getCodigoOrigen() {
         return codigoOrigen;
@@ -60,21 +58,24 @@ public class Conexion {
 
     @Override
     public String toString() {
-        return "Conexión [Origen: " + codigoOrigen + ", Destino: " + codigoDestino +
-                ", Tiempo: " + tiempo + " mins, Distancia: " + distancia + " m, Costo: " + costo + " pesos]";
+        return "Conexión [Origen: " + codigoOrigen +
+                ", Destino: " + codigoDestino +
+                ", Tiempo: " + tiempo + " mins" +
+                ", Distancia: " + distancia + " m" +
+                ", Costo: " + costo + " pesos]";
     }
 
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
-        Conexion conexion = (Conexion) obj;
-        return codigoOrigen.equals(conexion.codigoOrigen) && codigoDestino.equals(conexion.codigoDestino);
+        Conexion<?> conexion = (Conexion<?>) obj;
+        return codigoOrigen.equals(conexion.codigoOrigen)
+                && codigoDestino.equals(conexion.codigoDestino);
     }
 
     @Override
     public int hashCode() {
         return 31 * codigoOrigen.hashCode() + codigoDestino.hashCode();
     }
-
 }
